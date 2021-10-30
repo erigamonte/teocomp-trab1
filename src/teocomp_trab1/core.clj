@@ -1,30 +1,6 @@
 (ns teocomp-trab1.core
   (:gen-class))
 
-(defn dec-to-bin
-  [n]
-  (cond (zero? n) "0"
-        (= n 1) "1"
-        :else (str (dec-to-bin (quot n 2)) (rem n 2))))
-;(println (dec-to-bin 7))
-
-(defn bin-val
-  [d]
-  (- (int d) (int \0)))
-
-(defn bin-to-dec
-  [b]
-  (let [rb (reverse b)]
-    (apply + (for [i (range (count rb))]
-               (* (int (Math/pow 2 i)) (bin-val (nth rb i)))))))
-;(println (bin-to-dec "111"))
-
-(defn sum-vector
-  "Soma todos os numeros de um vetor"
-  [seq]
-  (apply + seq))
-;;(println (sum-vector [1 2 3 4 5]))
-
 (defn custom-subvec
   "Retorna um subvetor forçando ser um []"
   [X s e]
@@ -69,29 +45,29 @@
 (defn add
   "Soma dois vetores de digitos"
   ([X Y] (add (into [] (zero-right-pad X (max (count X) (count Y))))
-              (into [] (zero-right-pad Y (max (count X) (count Y)))) 0))
-  ([X Y carry]
+                (into [] (zero-right-pad Y (max (count X) (count Y))))
+                0
+                []))
+  ([X Y carry acc]
    ;(println "X: " X " Y: " Y " carry: " carry)
-  (cond
-    (and (= (count X) 0) (> (count Y) 0)) (into [] Y)
-    (and (= (count Y) 0) (> (count X) 0)) (into [] X)
-    (and (= carry 0) (and (= (count X) 0) (= (count Y) 0))) (vec [])
-    (and (> carry 0) (and (= (count X) 0) (= (count Y) 0))) (into [] (conj [] carry))
-    :else (into [] (concat
-                     (into [] (num-to-vec (mod (+ (+ (first X) (first Y)) carry) 10)))
-                     (add (into [] (rest X)) (into [] (rest Y)) (quot (+ (+ (first X) (first Y)) carry) 10))
-                     )))))
+   (cond
+     (and (= carry 0) (and (= (count X) 0) (= (count Y) 0))) acc
+     (and (> carry 0) (and (= (count X) 0) (= (count Y) 0))) (conj acc carry)
+     :else (recur (rest X) (rest Y) (quot (+ (+ (first X) (first Y)) carry) 10) (conj acc (mod (+ (+ (first X) (first Y)) carry) 10))))))
 
 (defn standard-multiply-one-digit
   "Multiplica um vetor por um digito pelo metodo standart"
-  [X y carry]
+  ([X y] (standard-multiply-one-digit X y 0 []))
+  ([X y carry acc]
   ;(println "smod: X: " X " y: " y " carry: " carry)
   (cond
-    (and (= carry 0) (= (count X) 0)) (vec [])
-    (and (> carry 0) (= (count X) 0)) (into [] (conj [] carry))
-    :else (into [] (concat
-               (into [] (num-to-vec (mod (+ (* (first X) y) carry) 10)))
-               (standard-multiply-one-digit (into [] (rest X)) y (quot (+ (* (first X) y) carry) 10))))))
+    (and (= carry 0) (= (count X) 0)) acc
+    (and (> carry 0) (= (count X) 0)) (conj acc carry)
+    :else (recur (rest X)
+                 y
+                 (quot (+ (* (first X) y) carry) 10)
+                 (conj acc (mod (+ (* (first X) y) carry) 10)))
+    )))
 
 ;(println (standard-multiply-one-digit [2 1 4 5 6 1] 9 0))
 
@@ -99,7 +75,7 @@
   "Multiplica um vetor por outro vetor pelo metodo standart"
   [X Y]
   (reduce add (for [i (range (count Y))]
-               (into [] (concat (zero-left-pad [] i) (standard-multiply-one-digit X (nth Y i) 0))))))
+               (into [] (concat (zero-left-pad [] i) (standard-multiply-one-digit X (nth Y i) 0 []))))))
 
 ;(println (standard-multiply [0 1] [2 5]))
 
@@ -126,5 +102,17 @@
 ;(println (karatsuba-multiply [0 5 4 3 2] [0 3 2 9 1]))
 ;(println (karatsuba-multiply [9 0 9 8 5 5 1 9 3 1 3 2 7 3 0 7 7 7 4 6 2 8 4 3 5] [8 0 3 7 8 4 3 6 7 0 6 3 9 2 3 7 7 3 2 8 8 7 4 0 3]))
 
+(defn random-numbers
+  ([n] (random-numbers n []))
+  ([n acc]
+  (cond
+     (= n 0) acc
+     :else (recur (- n 1) (conj acc (rand-int 10))))))
 
-
+(defn test-multiply
+  "Gera dois numeros aleatórios de n digitos e mede o tempo de cada um dos metodos de multiplicação"
+  [n]
+  (def A (random-numbers n))
+  (def B (random-numbers n))
+  (println "standard-multiply>>> " (time (standard-multiply A B)))
+  (println "karatsuba-multiply>> " (time (karatsuba-multiply A B))))
